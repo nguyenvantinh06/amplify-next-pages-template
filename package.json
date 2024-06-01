@@ -27,6 +27,7 @@
     "esbuild": "^0.20.2",
     "eslint": "^8",
     "eslint-config-next": "14.1.4",
+    "lambda-multipart-parser": "^1.0.1",
     "tsx": "^4.7.2",
     "typescript": "^5.4.5"
   }

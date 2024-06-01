@@ -1,44 +1,80 @@
-import { useState, useEffect } from "react";
-import { generateClient } from "aws-amplify/data";
-import type { Schema } from "@/amplify/data/resource";
-
-const client = generateClient<Schema>();
+/* eslint-disable jsx-a11y/alt-text */
+/* eslint-disable @next/next/no-img-element */
+"use client";
+import { get } from "aws-amplify/api";
+import {
+  fetchAuthSession,
+  fetchUserAttributes,
+  signInWithRedirect,
+} from "aws-amplify/auth";
+import { useState } from "react";
 
 export default function App() {
-  const [todos, setTodos] = useState<Array<Schema["Todo"]["type"]>>([]);
-
-  function listTodos() {
-    client.models.Todo.observeQuery().subscribe({
-      next: (data) => setTodos([...data.items]),
+  const [userInfo, setUserInfo] = useState<{
+    picture: string;
+    email: string;
+    preferred_username: string;
+  } | null>(null);
+  const signInWithGitHub = async () => {
+    await signInWithRedirect({
+      provider: {
+        custom: "GitHub",
+      },
+      customState: "state",
     });
-  }
+  };
 
-  useEffect(() => {
-    listTodos();
-  }, []);
-
-  function createTodo() {
-    client.models.Todo.create({
-      content: window.prompt("Todo content"),
+  const signInWithTwitter = async () => {
+    await signInWithRedirect({
+      provider: {
+        custom: "Twitter",
+      },
+      customState: "state",
     });
-  }
+  };
+
+  const getPrivateInfo = async () => {
+    const { tokens } = await fetchAuthSession();
+    const response = await get({
+      apiName: "api",
+      path: "/private",
+      options: {
+        headers: {
+          Authorization: `${tokens?.idToken?.toString()}`,
+        },
+      },
+    }).response;
+    console.log("response", await response.body.json());
+  };
+
+  const getCurrentUserInfo = async () => {
+    const session = await fetchUserAttributes();
+    setUserInfo({
+      picture: session.picture!,
+      email: session.email!,
+      preferred_username: session.preferred_username!,
+    });
+  };
 
   return (
-    <main>
-      <h1>My todos</h1>
-      <button onClick={createTodo}>+ new</button>
-      <ul>
-        {todos.map((todo) => (
-          <li key={todo.id}>{todo.content}</li>
-        ))}
-      </ul>
-      <div>
-        🥳 App successfully hosted. Try creating a new todo.
-        <br />
-        <a href="https://docs.amplify.aws/gen2/start/quickstart/nextjs-pages-router/">
-          Review next steps of this tutorial.
-        </a>
-      </div>
-    </main>
+    <>
+      <h1>Hello And Login</h1>
+      <button onClick={signInWithGitHub}>Sign In With Github</button>
+      <button onClick={signInWithTwitter}>Sign In With Twitter</button>
+      <button onClick={getCurrentUserInfo}>Get Current user Info</button>
+      <button onClick={getPrivateInfo}>Get Private info</button>
+      {userInfo?.email !== null ? (
+        <>
+          <img
+            src={userInfo?.picture}
+            style={{ borderRadius: "50%" }}
+            height="100"
+            width="100"
+          />
+          <div>{userInfo?.email}</div>
+          <div>{userInfo?.preferred_username}</div>
+        </>
+      ) : null}
+    </>
   );
 }
